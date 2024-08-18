@@ -30,7 +30,7 @@
         <input
           id="price"
           type="number"
-          v-model="productForm.price"
+          v-model.number="productForm.price"
           placeholder="Enter product price"
           required
           class="form-control"
@@ -41,7 +41,7 @@
         <input
           id="stock"
           type="number"
-          v-model="productForm.stock"
+          v-model.number="productForm.stock"
           placeholder="Enter product stock"
           required
           class="form-control"
@@ -65,6 +65,13 @@
         </button>
       </div>
     </form>
+    <!-- Modal for success message -->
+    <div v-if="showSuccessPopup" class="modal-overlay">
+      <div class="modal-content">
+        <p>Product successfully {{ isEditing ? "updated" : "created" }}!</p>
+        <button @click="closePopup">Close</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -72,11 +79,9 @@
 import axios from "../api/axios";
 
 export default {
-  props: {
-    product: Object,
-  },
   data() {
     return {
+      showSuccessPopup: false,
       productForm: {
         id: null,
         name: "",
@@ -88,68 +93,107 @@ export default {
       isEditing: false,
     };
   },
+  created() {
+    if (this.$route.params.id) {
+      this.isEditing = true;
+      this.fetchProduct(this.$route.params.id);
+    }
+  },
   methods: {
+    async fetchProduct(id) {
+      try {
+        const response = await axios.get(`/api/products/${id}`);
+        this.productForm = response.data;
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+      }
+    },
     async submitForm() {
       const formData = new FormData();
       formData.append("name", this.productForm.name);
       formData.append("description", this.productForm.description);
       formData.append("price", this.productForm.price);
       formData.append("stock", this.productForm.stock);
+
       if (this.productForm.image) {
         formData.append("image", this.productForm.image);
       }
 
-      console.log("Form data:", Array.from(formData.entries())); // Log form data
-
       try {
-        let response;
         if (this.isEditing) {
-          response = await axios.post(
-            `/api/products/${this.productForm.id}`,
-            formData,
-            {
-              headers: {
-                "Content-Type": "multipart/form-data",
-              },
-            }
-          );
+          await axios.put(`/api/products/${this.productForm.id}`, formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
         } else {
-          response = await axios.post("/api/products", formData, {
+          await axios.post("/api/products", formData, {
             headers: {
               "Content-Type": "multipart/form-data",
             },
           });
         }
 
-        console.log("API response:", response); // Log API response
-        this.$emit("form-submitted");
+        this.showSuccessPopup = true;
+        setTimeout(() => {
+          this.closePopup();
+          this.$router.push("/products");
+        }, 1500);
       } catch (error) {
-        console.error("Failed to submit form:", error); // Log any error
+        if (error.response && error.response.data) {
+          console.error("Validation errors:", error.response.data.errors);
+        } else {
+          console.error("Failed to submit form:", error);
+        }
       }
     },
+    // async submitForm() {
+    //   const formData = new FormData();
+    //   formData.append("name", this.productForm.name);
+    //   formData.append("description", this.productForm.description);
+    //   formData.append("price", this.productForm.price);
+    //   formData.append("stock", this.productForm.stock);
+    //   if (this.productForm.image) {
+    //     formData.append("image", this.productForm.image);
+    //   }
+
+    //   try {
+    //     if (this.isEditing) {
+    //       await axios.put(`/api/products/${this.productForm.id}`, formData, {
+    //         headers: {
+    //           "Content-Type": "multipart/form-data",
+    //         },
+    //       });
+    //     } else {
+    //       await axios.post("/api/products", formData, {
+    //         headers: {
+    //           "Content-Type": "multipart/form-data",
+    //         },
+    //       });
+    //     }
+
+    //     this.showSuccessPopup = true;
+    //     setTimeout(() => {
+    //       this.closePopup();
+    //       this.$router.push("/products");
+    //     }, 1500);
+    //   } catch (error) {
+    //     if (error.response && error.response.data) {
+    //       // Handle validation errors
+    //       console.error("Validation errors:", error.response.data.errors);
+    //     } else {
+    //       console.error("Failed to submit form:", error);
+    //     }
+    //   }
+    // },
     handleFileUpload(event) {
       this.productForm.image = event.target.files[0];
     },
-    cancelEdit() {
-      this.$emit("cancel-edit");
+    closePopup() {
+      this.showSuccessPopup = false;
     },
-  },
-  watch: {
-    product(newProduct) {
-      if (newProduct) {
-        this.productForm = { ...newProduct };
-        this.isEditing = true;
-      } else {
-        this.isEditing = false;
-        this.productForm = {
-          id: null,
-          name: "",
-          description: "",
-          price: "",
-          stock: "",
-          image: null,
-        };
-      }
+    cancelEdit() {
+      this.$router.push("/products");
     },
   },
 };
@@ -157,7 +201,7 @@ export default {
 
 <style scoped>
 .product-form-container {
-  max-width: 600px;
+  max-width: 800px;
   margin: auto;
   padding: 20px;
   background-color: #f9f9f9;
@@ -183,21 +227,15 @@ export default {
 
 .form-group label {
   display: block;
-  margin-bottom: 5px;
   font-weight: bold;
-  color: #555;
+  margin-bottom: 5px;
 }
 
 .form-control {
   width: 100%;
   padding: 10px;
-  border: 1px solid #ddd;
   border-radius: 4px;
-}
-
-.form-control:focus {
-  border-color: #007bff;
-  outline: none;
+  border: 1px solid #ddd;
 }
 
 .form-actions {
@@ -206,11 +244,11 @@ export default {
 }
 
 .btn {
-  padding: 10px 20px;
+  padding: 10px 15px;
   border: none;
   border-radius: 4px;
   color: #fff;
-  font-size: 16px;
+  font-size: 14px;
   cursor: pointer;
 }
 
@@ -218,22 +256,35 @@ export default {
   background-color: #007bff;
 }
 
+.btn-primary:hover {
+  background-color: #0056b3;
+}
+
 .btn-secondary {
   background-color: #6c757d;
 }
 
-@media (max-width: 600px) {
-  .form-actions {
-    flex-direction: column;
-  }
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
 
-  .btn {
-    width: 100%;
-    margin-bottom: 10px;
-  }
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-  .btn:last-child {
-    margin-bottom: 0;
-  }
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  text-align: center;
 }
 </style>
