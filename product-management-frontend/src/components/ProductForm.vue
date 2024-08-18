@@ -1,47 +1,50 @@
 <template>
-  <div class="form-container">
-    <h2>{{ isEdit ? "Edit Product" : "Add Product" }}</h2>
-    <form @submit.prevent="saveProduct" class="product-form">
+  <div class="product-form-container">
+    <h2 class="form-title">
+      {{ isEditing ? "Edit Product" : "Create Product" }}
+    </h2>
+    <form @submit.prevent="submitForm" class="product-form">
       <div class="form-group">
         <label for="name">Name</label>
         <input
           id="name"
-          v-model="product.name"
-          placeholder="Product Name"
+          type="text"
+          v-model="productForm.name"
+          placeholder="Enter product name"
           required
-          class="form-input"
+          class="form-control"
         />
       </div>
       <div class="form-group">
         <label for="description">Description</label>
         <textarea
           id="description"
-          v-model="product.description"
-          placeholder="Product Description"
+          v-model="productForm.description"
+          placeholder="Enter product description"
           required
-          class="form-input"
+          class="form-control"
         ></textarea>
       </div>
       <div class="form-group">
         <label for="price">Price</label>
         <input
           id="price"
-          v-model="product.price"
           type="number"
-          placeholder="Product Price"
+          v-model="productForm.price"
+          placeholder="Enter product price"
           required
-          class="form-input"
+          class="form-control"
         />
       </div>
       <div class="form-group">
         <label for="stock">Stock</label>
         <input
           id="stock"
-          v-model="product.stock"
           type="number"
-          placeholder="Product Stock"
+          v-model="productForm.stock"
+          placeholder="Enter product stock"
           required
-          class="form-input"
+          class="form-control"
         />
       </div>
       <div class="form-group">
@@ -50,76 +53,123 @@
           id="image"
           type="file"
           @change="handleFileUpload"
-          class="form-input"
+          class="form-control"
         />
       </div>
-      <button type="submit" class="submit-button">
-        {{ isEdit ? "Update" : "Add" }} Product
-      </button>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary">
+          {{ isEditing ? "Update Product" : "Create Product" }}
+        </button>
+        <button type="button" @click="cancelEdit" class="btn btn-secondary">
+          Cancel
+        </button>
+      </div>
     </form>
   </div>
 </template>
 
 <script>
-import { mapState, mapActions } from "vuex";
+import axios from "../api/axios";
 
 export default {
+  props: {
+    product: Object,
+  },
   data() {
     return {
-      product: {
+      productForm: {
+        id: null,
         name: "",
         description: "",
         price: "",
         stock: "",
         image: null,
       },
-      isEdit: false,
+      isEditing: false,
     };
   },
-  computed: {
-    ...mapState(["products"]),
-  },
-  created() {
-    const id = this.$route.params.id;
-    if (id) {
-      this.isEdit = true;
-      const product = this.products.find((p) => p.id === id);
-      if (product) {
-        this.product = { ...product };
-      }
-    }
-  },
   methods: {
-    ...mapActions(["addProduct", "updateProduct"]),
-    handleFileUpload(event) {
-      this.product.image = event.target.files[0];
-    },
-    async saveProduct() {
+    async submitForm() {
       const formData = new FormData();
-      Object.keys(this.product).forEach((key) => {
-        formData.append(key, this.product[key]);
-      });
-
-      if (this.isEdit) {
-        await this.updateProduct({ id: this.$route.params.id, ...formData });
-      } else {
-        await this.addProduct(formData);
+      formData.append("name", this.productForm.name);
+      formData.append("description", this.productForm.description);
+      formData.append("price", this.productForm.price);
+      formData.append("stock", this.productForm.stock);
+      if (this.productForm.image) {
+        formData.append("image", this.productForm.image);
       }
 
-      this.$router.push("/products");
+      console.log("Form data:", Array.from(formData.entries())); // Log form data
+
+      try {
+        let response;
+        if (this.isEditing) {
+          response = await axios.post(
+            `/api/products/${this.productForm.id}`,
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+            }
+          );
+        } else {
+          response = await axios.post("/api/products", formData, {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+          });
+        }
+
+        console.log("API response:", response); // Log API response
+        this.$emit("form-submitted");
+      } catch (error) {
+        console.error("Failed to submit form:", error); // Log any error
+      }
+    },
+    handleFileUpload(event) {
+      this.productForm.image = event.target.files[0];
+    },
+    cancelEdit() {
+      this.$emit("cancel-edit");
+    },
+  },
+  watch: {
+    product(newProduct) {
+      if (newProduct) {
+        this.productForm = { ...newProduct };
+        this.isEditing = true;
+      } else {
+        this.isEditing = false;
+        this.productForm = {
+          id: null,
+          name: "",
+          description: "",
+          price: "",
+          stock: "",
+          image: null,
+        };
+      }
     },
   },
 };
 </script>
 
 <style scoped>
-.form-container {
+.product-form-container {
   max-width: 600px;
-  margin: 0 auto;
+  margin: auto;
   padding: 20px;
   background-color: #f9f9f9;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.form-title {
+  text-align: center;
+  margin-bottom: 20px;
+  font-size: 24px;
+  color: #333;
 }
 
 .product-form {
@@ -135,53 +185,55 @@ export default {
   display: block;
   margin-bottom: 5px;
   font-weight: bold;
-  color: #333;
+  color: #555;
 }
 
-.form-input {
+.form-control {
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
-  box-sizing: border-box;
 }
 
-.form-input:focus {
+.form-control:focus {
   border-color: #007bff;
   outline: none;
 }
 
-textarea.form-input {
-  height: 100px;
-  resize: vertical;
+.form-actions {
+  display: flex;
+  justify-content: space-between;
 }
 
-.submit-button {
-  padding: 10px 15px;
-  background-color: #007bff;
-  color: white;
+.btn {
+  padding: 10px 20px;
   border: none;
   border-radius: 4px;
-  cursor: pointer;
+  color: #fff;
   font-size: 16px;
+  cursor: pointer;
 }
 
-.submit-button:hover {
-  background-color: #0056b3;
+.btn-primary {
+  background-color: #007bff;
 }
 
-/* Responsive design */
+.btn-secondary {
+  background-color: #6c757d;
+}
+
 @media (max-width: 600px) {
-  .form-container {
-    padding: 15px;
+  .form-actions {
+    flex-direction: column;
   }
 
-  .form-input {
-    font-size: 14px;
+  .btn {
+    width: 100%;
+    margin-bottom: 10px;
   }
 
-  .submit-button {
-    font-size: 14px;
+  .btn:last-child {
+    margin-bottom: 0;
   }
 }
 </style>
