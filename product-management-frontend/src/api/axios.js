@@ -1,14 +1,14 @@
 import axios from "axios";
-import store from "../store"; // Adjust the import path based on your project structure
+import store from "../store"; // Import Vuex store
 
-// Set the base URL for your API
+const instance = axios.create({
+  baseURL: "http://127.0.0.1:8000/api",
+});
 
-axios.defaults.baseURL = "http://127.0.0.1:8000";
-
-// Add a request interceptor to include the token in headers
-axios.interceptors.request.use(
+// Request interceptor to add token to headers
+instance.interceptors.request.use(
   (config) => {
-    const token = store.state.token || localStorage.getItem("token");
+    const token = store.state.token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -19,4 +19,17 @@ axios.interceptors.request.use(
   }
 );
 
-export default axios;
+// Response interceptor to handle token errors
+instance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response.status === 401) {
+      // Handle unauthorized access (e.g., logout the user)
+      store.dispatch("clearToken");
+      window.location.href = "/login"; // Redirect to login page
+    }
+    return Promise.reject(error);
+  }
+);
+
+export default instance;

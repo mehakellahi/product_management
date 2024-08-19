@@ -18,7 +18,7 @@ use App\Http\Controllers\ProductManagementController;
 
 Route::post('register', [AuthController::class, 'register']);
 Route::post('login', [AuthController::class, 'login']);
-Route::post('logout', [AuthController::class, 'logout'])->middleware('auth:api');
+Route::post('logout', [AuthController::class, 'logout'])->middleware('auth');
 Route::middleware('auth')->group(function () {
     Route::get('products', [ProductManagementController::class, 'index']);
     Route::get('products/{id}', [ProductManagementController::class, 'show']);

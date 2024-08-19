@@ -2,17 +2,16 @@ import { createStore } from "vuex";
 
 export default createStore({
   state: {
-    token: null,
+    token: localStorage.getItem("token") || null, // Initialize from localStorage
   },
   mutations: {
     SET_TOKEN(state, token) {
       state.token = token;
-      // Optionally, save the token to localStorage
-      localStorage.setItem("token", token);
+      localStorage.setItem("token", token); // Save to localStorage
     },
     CLEAR_TOKEN(state) {
       state.token = null;
-      localStorage.removeItem("token");
+      localStorage.removeItem("token"); // Remove from localStorage
     },
   },
   actions: {

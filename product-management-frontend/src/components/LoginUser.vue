@@ -35,16 +35,16 @@ export default {
     ...mapActions(["setToken"]),
     async login() {
       try {
-        const response = await axios.post("/api/login", {
+        const response = await axios.post("/login", {
           email: this.email,
           password: this.password,
         });
-        console.log(response);
-        this.setToken(response.data.token);
-        this.$router.push("/products");
+        this.setToken(response.data.token); // Store token in Vuex and localStorage
+        this.$router.push("/products"); // Redirect to products page
       } catch (error) {
-        this.errorMessage =
-          "Login failed. Please check your credentials and try again.";
+        if (error.response && error.response.data) {
+          this.errors = error.response.data.errors;
+        }
       }
     },
   },
