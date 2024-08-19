@@ -1,32 +1,51 @@
 <template>
-  <div class="product-list-container">
-    <h2 class="title">Product List</h2>
-    <router-link to="/products/new" class="btn btn-success add-product-button">
-      Add New Product
-    </router-link>
-    <ul class="product-list">
-      <li v-for="product in products" :key="product.id" class="product-item">
-        <img :src="product.image" :alt="product.name" class="product-image" />
-        <div class="product-info">
-          <span class="product-name">{{ product.name }}</span>
-          <span class="product-price">
-            ${{ (parseFloat(product.price) || 0).toFixed(2) }}
-          </span>
-          <span class="product-stock">Stock: {{ product.stock }}</span>
-        </div>
-        <div class="actions">
-          <button @click="deleteProduct(product.id)" class="btn btn-danger">
-            Delete
-          </button>
-          <router-link
-            :to="{ name: 'edit', params: { id: product.id } }"
-            class="btn btn-primary"
+  <div class="admin-panel">
+    <header class="header">
+      <h1 class="admin-title">Admin Panel</h1>
+      <button @click="logout" class="btn btn-logout">Logout</button>
+    </header>
+    <main class="content">
+      <div class="product-list-container">
+        <h2 class="title">Product List</h2>
+        <router-link
+          to="/products/new"
+          class="btn btn-success add-product-button"
+        >
+          Add New Product
+        </router-link>
+        <ul class="product-list">
+          <li
+            v-for="product in products"
+            :key="product.id"
+            class="product-item"
           >
-            Edit
-          </router-link>
-        </div>
-      </li>
-    </ul>
+            <img
+              :src="getProductImageUrl(product.image_path)"
+              :alt="product.name"
+              class="product-image"
+            />
+            <div class="product-info">
+              <span class="product-name">{{ product.name }}</span>
+              <span class="product-price">
+                ${{ (parseFloat(product.price) || 0).toFixed(2) }}
+              </span>
+              <span class="product-stock">Stock: {{ product.stock }}</span>
+            </div>
+            <div class="actions">
+              <button @click="deleteProduct(product.id)" class="btn btn-danger">
+                Delete
+              </button>
+              <router-link
+                :to="{ name: 'edit', params: { id: product.id } }"
+                class="btn btn-primary"
+              >
+                Edit
+              </router-link>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </main>
   </div>
 </template>
 
@@ -59,35 +78,81 @@ export default {
         console.error("Failed to delete product:", error);
       }
     },
+    getProductImageUrl(imagePath) {
+      const baseURL = "http://127.0.0.1:8000/storage/";
+      return imagePath ? baseURL + imagePath : ""; // Handle image path properly
+    },
+    async logout() {
+      try {
+        await axios.post("/api/logout"); // Adjust the API endpoint if needed
+        // Redirect to the login page or homepage
+        this.$router.push("/login"); // Adjust the route as needed
+      } catch (error) {
+        console.error("Failed to logout:", error);
+      }
+    },
   },
 };
 </script>
 
 <style scoped>
+.admin-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.header {
+  background-color: #343a40;
+  color: #fff;
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-title {
+  margin: 0;
+  font-size: 24px;
+}
+
+.btn-logout {
+  background-color: #dc3545;
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.btn-logout:hover {
+  background-color: #c82333;
+}
+
+.content {
+  flex-grow: 1;
+  padding: 20px;
+}
+
 .product-list-container {
-  max-width: 800px;
+  max-width: 1200px;
   margin: auto;
   padding: 20px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .title {
-  text-align: center;
-  margin-bottom: 20px;
   font-size: 24px;
-  color: #333;
+  margin-bottom: 20px;
 }
 
 .add-product-button {
-  display: block;
-  margin: 0 auto 20px;
-  width: fit-content;
+  display: inline-block;
+  margin-bottom: 20px;
 }
 
 .product-list {
-  list-style: none;
+  list-style-type: none;
   padding: 0;
 }
 
@@ -95,18 +160,14 @@ export default {
   display: flex;
   align-items: center;
   padding: 10px;
-  margin-bottom: 10px;
-  background-color: #fff;
-  border-radius: 4px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid #ddd;
 }
 
 .product-image {
-  width: 60px;
-  height: 60px;
+  width: 100px;
+  height: 100px;
   object-fit: cover;
-  border-radius: 4px;
-  margin-right: 10px;
+  margin-right: 20px;
 }
 
 .product-info {
@@ -114,21 +175,20 @@ export default {
 }
 
 .product-name {
-  display: block;
   font-size: 18px;
-  color: #333;
+  font-weight: bold;
 }
 
 .product-price {
   display: block;
-  font-size: 18px;
-  color: #666;
+  font-size: 16px;
+  color: #333;
 }
 
 .product-stock {
   display: block;
   font-size: 14px;
-  color: #999;
+  color: #666;
 }
 
 .actions {
@@ -137,20 +197,12 @@ export default {
 }
 
 .btn {
-  padding: 10px 15px;
+  padding: 8px 12px;
   border: none;
   border-radius: 4px;
   color: #fff;
   font-size: 14px;
   cursor: pointer;
-}
-
-.btn-primary {
-  background-color: #007bff;
-}
-
-.btn-primary:hover {
-  background-color: #0056b3;
 }
 
 .btn-danger {
@@ -159,6 +211,14 @@ export default {
 
 .btn-danger:hover {
   background-color: #c82333;
+}
+
+.btn-primary {
+  background-color: #007bff;
+}
+
+.btn-primary:hover {
+  background-color: #0056b3;
 }
 
 .btn-success {

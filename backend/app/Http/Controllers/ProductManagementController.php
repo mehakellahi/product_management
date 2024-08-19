@@ -12,12 +12,12 @@ class ProductManagementController extends Controller
 {
     public function index()
     {
-        return Product::all();
+        return Product::where('user_id', auth()->id())->get();
     }
 
     public function show($id)
     {
-        $product = Product::find($id);
+        $product = Product::where('user_id', auth()->id())->find($id);
         if (!$product) {
             return response()->json(['message' => 'Product not found'], 404);
         }
@@ -34,9 +34,10 @@ class ProductManagementController extends Controller
             'image' => 'nullable|image',
         ]);
 
-        $imagePath = $request->file('image') ? $request->file('image')->store('products') : null;
+        $imagePath = $request->file('image') ? $request->file('image')->store('products', 'public') : null;
 
         $product = Product::create([
+            'user_id' => auth()->id(),
             'name' => $request->name,
             'description' => $request->description,
             'price' => $request->price,
@@ -49,7 +50,7 @@ class ProductManagementController extends Controller
 
     public function update(Request $request, $id)
     {
-        $product = Product::find($id);
+        $product = Product::where('user_id', auth()->id())->find($id);
         if (!$product) {
             return response()->json(['message' => 'Product not found'], 404);
         }
@@ -64,9 +65,9 @@ class ProductManagementController extends Controller
 
         if ($request->file('image')) {
             if ($product->image_path) {
-                Storage::delete($product->image_path);
+                Storage::disk('public')->delete($product->image_path);
             }
-            $product->image_path = $request->file('image')->store('products');
+            $product->image_path = $request->file('image')->store('products', 'public');
         }
 
         $product->update([
@@ -82,16 +83,16 @@ class ProductManagementController extends Controller
 
     public function destroy($id)
     {
-        $product = Product::find($id);
+        $product = Product::where('user_id', auth()->id())->find($id);
         if (!$product) {
             return response()->json(['message' => 'Product not found'], 404);
         }
 
         if ($product->image_path) {
-            Storage::delete($product->image_path);
+            Storage::disk('public')->delete($product->image_path);
         }
 
-       $product->delete();
+        $product->delete();
         return response()->json(['message' => 'Product deleted'], 204);
     }
 }

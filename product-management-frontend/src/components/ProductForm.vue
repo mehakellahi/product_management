@@ -137,7 +137,7 @@ export default {
           stock: response.data.stock || 0,
           image: null, // Reset image since we're not fetching the file itself
         };
-        console.log("productfomr", this.productForm); // Debugging to ensure the form is populated
+        console.log("productForm", this.productForm); // Debugging to ensure the form is populated
       } catch (error) {
         console.error("Failed to fetch product:", error);
       }
