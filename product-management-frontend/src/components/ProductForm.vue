@@ -10,43 +10,63 @@
           id="name"
           type="text"
           v-model="productForm.name"
+          @input="clearError('name')"
           placeholder="Enter product name"
           required
           class="form-control"
         />
+        <span v-if="errors.name" class="error-message">{{
+          errors.name[0]
+        }}</span>
       </div>
+
       <div class="form-group">
         <label for="description">Description</label>
         <textarea
           id="description"
           v-model="productForm.description"
+          @input="clearError('description')"
           placeholder="Enter product description"
           required
           class="form-control"
         ></textarea>
+        <span v-if="errors.description" class="error-message">{{
+          errors.description[0]
+        }}</span>
       </div>
+
       <div class="form-group">
         <label for="price">Price</label>
         <input
           id="price"
           type="number"
           v-model.number="productForm.price"
+          @input="clearError('price')"
           placeholder="Enter product price"
           required
           class="form-control"
         />
+        <span v-if="errors.price" class="error-message">{{
+          errors.price[0]
+        }}</span>
       </div>
+
       <div class="form-group">
         <label for="stock">Stock</label>
         <input
           id="stock"
           type="number"
           v-model.number="productForm.stock"
+          @input="clearError('stock')"
           placeholder="Enter product stock"
           required
           class="form-control"
         />
+        <span v-if="errors.stock" class="error-message">{{
+          errors.stock[0]
+        }}</span>
       </div>
+
       <div class="form-group">
         <label for="image">Image</label>
         <input
@@ -55,7 +75,11 @@
           @change="handleFileUpload"
           class="form-control"
         />
+        <span v-if="errors.image" class="error-message">{{
+          errors.image[0]
+        }}</span>
       </div>
+
       <div class="form-actions">
         <button type="submit" class="btn btn-primary">
           {{ isEditing ? "Update Product" : "Create Product" }}
@@ -65,11 +89,12 @@
         </button>
       </div>
     </form>
+
     <!-- Modal for success message -->
     <div v-if="showSuccessPopup" class="modal-overlay">
       <div class="modal-content">
         <p>Product successfully {{ isEditing ? "updated" : "created" }}!</p>
-        <button @click="closePopup">Close</button>
+        <button @click="closePopup" class="btn btn-primary">Close</button>
       </div>
     </div>
   </div>
@@ -86,11 +111,12 @@ export default {
         id: null,
         name: "",
         description: "",
-        price: "",
-        stock: "",
+        price: 0,
+        stock: 0,
         image: null,
       },
       isEditing: false,
+      errors: {}, // Object to hold validation errors
     };
   },
   created() {
@@ -103,12 +129,22 @@ export default {
     async fetchProduct(id) {
       try {
         const response = await axios.get(`/api/products/${id}`);
-        this.productForm = response.data;
+        this.productForm = {
+          id: response.data.id,
+          name: response.data.name || "",
+          description: response.data.description || "",
+          price: response.data.price || 0,
+          stock: response.data.stock || 0,
+          image: null, // Reset image since we're not fetching the file itself
+        };
+        console.log("productfomr", this.productForm); // Debugging to ensure the form is populated
       } catch (error) {
         console.error("Failed to fetch product:", error);
       }
     },
     async submitForm() {
+      this.errors = {}; // Clear previous errors
+
       const formData = new FormData();
       formData.append("name", this.productForm.name);
       formData.append("description", this.productForm.description);
@@ -121,7 +157,9 @@ export default {
 
       try {
         if (this.isEditing) {
-          await axios.put(`/api/products/${this.productForm.id}`, formData, {
+          formData.append("_method", "PUT"); // Add the _method field to simulate a PUT request for file uploads
+
+          await axios.post(`/api/products/${this.productForm.id}`, formData, {
             headers: {
               "Content-Type": "multipart/form-data",
             },
@@ -141,53 +179,21 @@ export default {
         }, 1500);
       } catch (error) {
         if (error.response && error.response.data) {
-          console.error("Validation errors:", error.response.data.errors);
+          this.errors = error.response.data.errors; // Capture validation errors
+          console.error("Validation errors:", this.errors);
         } else {
           console.error("Failed to submit form:", error);
         }
       }
     },
-    // async submitForm() {
-    //   const formData = new FormData();
-    //   formData.append("name", this.productForm.name);
-    //   formData.append("description", this.productForm.description);
-    //   formData.append("price", this.productForm.price);
-    //   formData.append("stock", this.productForm.stock);
-    //   if (this.productForm.image) {
-    //     formData.append("image", this.productForm.image);
-    //   }
 
-    //   try {
-    //     if (this.isEditing) {
-    //       await axios.put(`/api/products/${this.productForm.id}`, formData, {
-    //         headers: {
-    //           "Content-Type": "multipart/form-data",
-    //         },
-    //       });
-    //     } else {
-    //       await axios.post("/api/products", formData, {
-    //         headers: {
-    //           "Content-Type": "multipart/form-data",
-    //         },
-    //       });
-    //     }
-
-    //     this.showSuccessPopup = true;
-    //     setTimeout(() => {
-    //       this.closePopup();
-    //       this.$router.push("/products");
-    //     }, 1500);
-    //   } catch (error) {
-    //     if (error.response && error.response.data) {
-    //       // Handle validation errors
-    //       console.error("Validation errors:", error.response.data.errors);
-    //     } else {
-    //       console.error("Failed to submit form:", error);
-    //     }
-    //   }
-    // },
     handleFileUpload(event) {
       this.productForm.image = event.target.files[0];
+    },
+    clearError(field) {
+      if (this.errors[field]) {
+        this.errors[field] = null;
+      }
     },
     closePopup() {
       this.showSuccessPopup = false;
@@ -236,6 +242,12 @@ export default {
   padding: 10px;
   border-radius: 4px;
   border: 1px solid #ddd;
+}
+
+.error-message {
+  color: red;
+  font-size: 14px;
+  margin-top: 5px;
 }
 
 .form-actions {

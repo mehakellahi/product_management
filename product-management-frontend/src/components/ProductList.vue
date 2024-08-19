@@ -1,12 +1,19 @@
 <template>
   <div class="product-list-container">
     <h2 class="title">Product List</h2>
+    <router-link to="/products/new" class="btn btn-success add-product-button">
+      Add New Product
+    </router-link>
     <ul class="product-list">
       <li v-for="product in products" :key="product.id" class="product-item">
-        <span class="product-name">{{ product.name }}</span>
-        <span class="product-price"
-          >${{ (parseFloat(product.price) || 0).toFixed(2) }}</span
-        >
+        <img :src="product.image" :alt="product.name" class="product-image" />
+        <div class="product-info">
+          <span class="product-name">{{ product.name }}</span>
+          <span class="product-price">
+            ${{ (parseFloat(product.price) || 0).toFixed(2) }}
+          </span>
+          <span class="product-stock">Stock: {{ product.stock }}</span>
+        </div>
         <div class="actions">
           <button @click="deleteProduct(product.id)" class="btn btn-danger">
             Delete
@@ -20,9 +27,6 @@
         </div>
       </li>
     </ul>
-    <router-link to="/products/new" class="btn btn-success">
-      Add New Product
-    </router-link>
   </div>
 </template>
 
@@ -76,6 +80,12 @@ export default {
   color: #333;
 }
 
+.add-product-button {
+  display: block;
+  margin: 0 auto 20px;
+  width: fit-content;
+}
+
 .product-list {
   list-style: none;
   padding: 0;
@@ -83,7 +93,6 @@ export default {
 
 .product-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 10px;
   margin-bottom: 10px;
@@ -92,14 +101,34 @@ export default {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+.product-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 10px;
+}
+
+.product-info {
+  flex-grow: 1;
+}
+
 .product-name {
+  display: block;
   font-size: 18px;
   color: #333;
 }
 
 .product-price {
+  display: block;
   font-size: 18px;
   color: #666;
+}
+
+.product-stock {
+  display: block;
+  font-size: 14px;
+  color: #999;
 }
 
 .actions {
